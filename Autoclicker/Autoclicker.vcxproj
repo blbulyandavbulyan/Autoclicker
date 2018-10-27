@@ -165,7 +165,10 @@
     <ResourceCompile Include="Autoclicker.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="Autoclicker Icons\Autoclicker100X100.ico" />
+    <Image Include="Autoclicker Icons\Autoclicker48X48.ico" />
     <Image Include="Autoclicker.ico" />
+    <Image Include="icon1.ico" />
     <Image Include="small.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

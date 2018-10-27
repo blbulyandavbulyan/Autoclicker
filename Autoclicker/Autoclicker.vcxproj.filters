@@ -48,5 +48,14 @@
     <Image Include="Autoclicker.ico">
       <Filter>Файлы ресурсов</Filter>
     </Image>
+    <Image Include="icon1.ico">
+      <Filter>Файлы ресурсов</Filter>
+    </Image>
+    <Image Include="Autoclicker Icons\Autoclicker48X48.ico">
+      <Filter>Файлы ресурсов</Filter>
+    </Image>
+    <Image Include="Autoclicker Icons\Autoclicker100X100.ico">
+      <Filter>Файлы ресурсов</Filter>
+    </Image>
   </ItemGroup>
 </Project>
