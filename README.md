@@ -1,4 +1,4 @@
-# Autoclicker
+# ![AutoclickerLogo](https://i.imgur.com/Y0XpAmC.png) Autoclicker
 Это автокликер, написан в VS 2019 на WINAPI и C++
 # Скриншоты пользовательского интерфейса
 1. Главное окно программы:  
