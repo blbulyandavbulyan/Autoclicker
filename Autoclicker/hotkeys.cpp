@@ -60,3 +60,123 @@ bool IsThereSuchAHotKeyInTheArray(ProgrammParameters::HotKey* HotKeys, UINT Arra
 	}
 	return false;
 }
+//диалоговая процедура окна настройки горячих клавиш
+INT_PTR CALLBACK HotKeySettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam) {
+	HWND hSelectHotKeyId = GetDlgItem(hDlg, IDC_SELECT_HOTKEY_ID);
+	HWND hEnterHotKey = GetDlgItem(hDlg, IDC_ENTER_HOTKEY);
+	HWND hEnableHotKey = GetDlgItem(hDlg, IDC_ENABLE_HOTKEY);
+	static ProgrammParameters::HotKey* HotKeys = nullptr;
+	static PHotKeySettingsDlgParameters Params = nullptr;
+	switch (message) {
+	case WM_INITDIALOG: {
+		Params = (PHotKeySettingsDlgParameters)lParam;
+		if ((Params->HotKeysCount != 0) && (Params != nullptr) && (Params->PHotKeys != nullptr))HotKeys = new ProgrammParameters::HotKey[Params->HotKeysCount];
+		else {
+			EndDialog(hDlg, FAST_FAIL_INVALID_ARG);
+			return 0;
+		}
+		AssignOneArrayToAnother(HotKeys, Params->PHotKeys, Params->HotKeysCount);
+		//данный массив следует вынести в (структуру состояния программы)/(в структуру параметров программы) или вообще сделать глобальным
+		for (UINT i = 0; i < Params->HotKeysCount; i++) {
+			LRESULT ResultSendMessage = SendMessage(hSelectHotKeyId, CB_ADDSTRING, NULL, (LPARAM)HotKeys[i].HotKeyNameInHotKeySettingsDlg);
+			if (ResultSendMessage == CB_ERR) {
+				TSTRING DMsg = _TEXT("Не удалось добавить строку \"");
+				DMsg += HotKeys[i].HotKeyNameInHotKeySettingsDlg;
+				DMsg += _TEXT("\" в ComboBox");
+				MessageDebug(DMsg.c_str(), _TEXT("Ошибка в функции ") __FUNCTION__);
+			}
+			else if (ResultSendMessage == CB_ERRSPACE) {
+				TSTRING DMsg = _TEXT("Ошибка в функцции ") __FUNCTION__ _TEXT(": Не удалось добавить строку \"");
+				DMsg += HotKeys[i].HotKeyNameInHotKeySettingsDlg;
+				DMsg += _TEXT("\" в ComboBox!\n");
+				DMsg += _TEXT("Недостаточно места для добавления новой строки в ComboBox!\n");
+				OutputDebugString(DMsg.c_str());
+			}
+		}
+		SendMessage(hSelectHotKeyId, CB_SETCURSEL, 0, NULL);
+		WPARAM wParamForSetHotKey = MAKEWORD(HotKeys[0].vk, ConvertHotKeyFromRegisterHotKeyForHotKeyControl(HotKeys[0].Modifiers));
+		SendMessage(hEnterHotKey, HKM_SETHOTKEY, wParamForSetHotKey, NULL);
+		if (HotKeys[0].HotKeyIsEnable)SendMessage(hEnableHotKey, BM_SETCHECK, (WPARAM)BST_CHECKED, NULL);
+		else SendMessage(hEnableHotKey, BM_SETCHECK, (WPARAM)BST_UNCHECKED, NULL);
+		//HICON hDialogIcon = LoadIcon(PS.hInst, MAKEINTRESOURCE(IDI_AUTOCLICKER));
+		if (Params->hDialogIcon != NULL) {
+			SendMessage(hDlg, WM_SETICON, ICON_BIG, (LPARAM)Params->hDialogIcon);
+			SendMessage(hDlg, WM_SETICON, ICON_SMALL, (LPARAM)Params->hDialogIcon);
+		}
+		//данный вызов предназначен для того, чтобы вывести окно на передний план, он здесь нужен для корректной работы горячей клавиши вызова настроек горячих клавиш
+		SetForegroundWindow(hDlg);
+		return (INT_PTR)TRUE;
+	}
+	case WM_COMMAND:
+		switch (LOWORD(wParam)) {
+		case IDC_ENABLE_HOTKEY: {
+			LRESULT SelectedHotKeyId = SendMessage(hSelectHotKeyId, CB_GETCURSEL, NULL, NULL);
+			if (IsDlgButtonChecked(hDlg, IDC_ENABLE_HOTKEY) == BST_CHECKED)HotKeys[SelectedHotKeyId].HotKeyIsEnable = true;
+			else HotKeys[SelectedHotKeyId].HotKeyIsEnable = false;
+			break;
+		}
+		case IDC_BUTTON_RESET_ALL_HOTKEYS: {
+			if (MessageBox(hDlg, _T("Сбросить настройки горячих клавиш?"), _T("Вы уверены?!?"), MB_YESNO | MB_ICONQUESTION) == IDYES) {
+				ProgrammParameters PPL;
+				AssignOneArrayToAnother(HotKeys, PPL.HotKeys, Params->HotKeysCount);
+				LRESULT SelectedHotKeyId = SendMessage(hSelectHotKeyId, CB_GETCURSEL, NULL, NULL);
+				WPARAM wParamForSetHotKey = MAKEWORD(HotKeys[SelectedHotKeyId].vk, ConvertHotKeyFromRegisterHotKeyForHotKeyControl(HotKeys[SelectedHotKeyId].Modifiers));
+				if (HotKeys[SelectedHotKeyId].HotKeyIsEnable)SendMessage(hEnableHotKey, BM_SETCHECK, (WPARAM)BST_CHECKED, NULL);
+				else SendMessage(hEnableHotKey, BM_SETCHECK, (WPARAM)BST_UNCHECKED, NULL);
+				SendMessage(hEnterHotKey, HKM_SETHOTKEY, wParamForSetHotKey, NULL);
+			}
+			break;
+		}
+		case IDC_BUTTON_HOTKEY_RESET: {
+			ProgrammParameters PPL;
+			LRESULT SelectedHotKeyId = SendMessage(hSelectHotKeyId, CB_GETCURSEL, NULL, NULL);
+			HotKeys[SelectedHotKeyId].Modifiers = PPL.HotKeys[SelectedHotKeyId].Modifiers;
+			HotKeys[SelectedHotKeyId].vk = PPL.HotKeys[SelectedHotKeyId].vk;
+			HotKeys[SelectedHotKeyId].HotKeyIsEnable = PPL.HotKeys[SelectedHotKeyId].HotKeyIsEnable;
+			WPARAM wParamForSetHotKey = MAKEWORD(HotKeys[SelectedHotKeyId].vk, ConvertHotKeyFromRegisterHotKeyForHotKeyControl(HotKeys[SelectedHotKeyId].Modifiers));
+			if (HotKeys[SelectedHotKeyId].HotKeyIsEnable)SendMessage(hEnableHotKey, BM_SETCHECK, (WPARAM)BST_CHECKED, NULL);
+			else SendMessage(hEnableHotKey, BM_SETCHECK, (WPARAM)BST_UNCHECKED, NULL);
+			SendMessage(hEnterHotKey, HKM_SETHOTKEY, wParamForSetHotKey, NULL);
+			break;
+		}
+		case IDOK:
+			AssignOneArrayToAnother(Params->PHotKeys, HotKeys, Params->HotKeysCount);
+		case IDCANCEL:
+			delete[] HotKeys;
+			EndDialog(hDlg, IDOK);
+			break;
+		}
+		switch (HIWORD(wParam)) {
+		case CBN_SELCHANGE:
+			if ((HWND)lParam == hSelectHotKeyId) {
+				LRESULT SelectedHotKeyId = SendMessage(hSelectHotKeyId, CB_GETCURSEL, NULL, NULL);
+				WPARAM wParamForSetHotKey = MAKEWORD(HotKeys[SelectedHotKeyId].vk, ConvertHotKeyFromRegisterHotKeyForHotKeyControl(HotKeys[SelectedHotKeyId].Modifiers));
+				if (HotKeys[SelectedHotKeyId].HotKeyIsEnable)SendMessage(hEnableHotKey, BM_SETCHECK, (WPARAM)BST_CHECKED, NULL);
+				else SendMessage(hEnableHotKey, BM_SETCHECK, (WPARAM)BST_UNCHECKED, NULL);
+				SendMessage(hEnterHotKey, HKM_SETHOTKEY, wParamForSetHotKey, NULL);
+			}
+			break;
+		case EN_CHANGE: {
+			LRESULT EnteredHotKey = SendMessage(hEnterHotKey, HKM_GETHOTKEY, NULL, NULL);
+			if (EnteredHotKey != 0) {
+				UINT SelectedHotKeyId = SendMessage(hSelectHotKeyId, CB_GETCURSEL, NULL, NULL);
+				UINT Modifiers = ConvertHotKeyFromControlHotKeyForRegisterHotKey((UINT)HIBYTE(LOWORD(EnteredHotKey)));
+				UINT vk = LOBYTE(LOWORD(EnteredHotKey));
+				if (IsThereSuchAHotKeyInTheArray(HotKeys, Params->HotKeysCount, SelectedHotKeyId, Modifiers, vk)) {
+					MessageBox(hDlg, _TEXT("Такая комбинация клавиш уже назначена для другой горячей клавиши, введите другую!"), _TEXT("Невозможно назначить такую комбинацию клавиш!"), MB_OK | MB_ICONERROR);
+					HotKeys[SelectedHotKeyId].Modifiers = Params->PHotKeys[SelectedHotKeyId].Modifiers;
+					HotKeys[SelectedHotKeyId].vk = Params->PHotKeys[SelectedHotKeyId].vk;
+					WPARAM wParamForSetHotKey = MAKEWORD(HotKeys[SelectedHotKeyId].vk, ConvertHotKeyFromRegisterHotKeyForHotKeyControl(HotKeys[SelectedHotKeyId].Modifiers));
+					SendMessage(hEnterHotKey, HKM_SETHOTKEY, wParamForSetHotKey, NULL);
+				}
+				else {
+					HotKeys[SelectedHotKeyId].Modifiers = Modifiers;
+					HotKeys[SelectedHotKeyId].vk = vk;
+				}
+			}
+			break;
+		}
+		}
+	}
+	return (INT_PTR)FALSE;
+}
