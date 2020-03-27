@@ -1,0 +1,94 @@
+
+dw 0 ; reserved, must be 0
+dw 1 ; icon type, must be 1
+dw 6 ; number of images in file
+
+;256X256 IconCconf
+db 0 ; width, set 0 to width = 256
+db 0; height, set 0 to height = 256
+db 0 ; no color palette
+db 0 ; reserved, must be 0
+dw 1 ; planes
+dw 32 ; bits per pixel
+dd icon256_end-icon256_start ; length
+dd icon256_start ; offset
+
+;128X128 IconCconf
+db 128 ; width, set 0 to width = 256
+db 128; height, set 0 to height = 256
+db 0 ; no color palette
+db 0 ; reserved, must be 0
+dw 1 ; planes
+dw 32 ; bits per pixel
+dd icon128_end-icon128_start ; length
+dd icon128_start ; offset
+
+;64X64 IconCconf
+db 64 ; width
+db 64 ; height
+db 0 ; no color palette
+db 0 ; reserved, must be 0
+dw 1 ; planes
+dw 32 ; bits per pixel
+dd icon64_end-icon64_start ; length
+dd icon64_start ; offset
+
+;48X48 IconConf
+db 48 ; width
+db 48 ; height
+db 0 ; no color palette
+db 0 ; reserved, must be 0
+dw 1 ; planes
+dw 32 ; bits per pixel
+dd icon48_end-icon48_start ; length
+dd icon48_start ; offset
+
+; 32X32 IconConf
+db 32 ; width
+db 32 ; height
+db 0 ; no color palette
+db 0 ; reserved, must be 0
+dw 1 ; planes
+dw 32 ; bits per pixel
+dd icon32_end-icon32_start ; length
+dd icon32_start ; offset
+
+;16X16 IconConf
+db 16 ; width
+db 16 ; height
+db 0 ; no color palette
+db 0 ; reserved, must be 0
+dw 1 ; planes
+dw 32 ; bits per pixel
+dd icon16_end-icon16_start ; length
+dd icon16_start ; offset
+
+;256X256 IconFile
+icon256_start:
+file 'Autoclicker256X256.png'
+icon256_end:
+
+;128X128 IconFile
+icon128_start:
+file 'Autoclicker128X128.png'
+icon128_end:
+
+;64X64 IconFile
+icon64_start:
+file 'Autoclicker64X64.png'
+icon64_end:
+
+;48X48 IconFile
+icon48_start:
+file 'Autoclicker48X48.png'
+icon48_end:
+
+;32X32 IconFile
+icon32_start:
+file 'Autoclicker32X32.png'
+icon32_end:
+
+;16X16 IconFile
+icon16_start:
+file 'Autoclicker16X16.png'
+icon16_end:

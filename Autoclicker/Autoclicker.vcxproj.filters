@@ -48,10 +48,10 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="Autoclicker Icons\Autoclicker48X48.ico">
+    <Image Include="Autoclicker Icons\Autoclicker.ico">
       <Filter>Файлы ресурсов</Filter>
     </Image>
-    <Image Include="Autoclicker Icons\Autoclicker100X100.ico">
+    <Image Include="Autoclicker Icons\HotKeySettings.ico">
       <Filter>Файлы ресурсов</Filter>
     </Image>
   </ItemGroup>
