@@ -13,10 +13,11 @@ INT_PTR CALLBACK HotKeySettingsDlgProc(HWND, UINT, WPARAM, LPARAM);//диалоговая 
 template<typename A>void AssignOneArrayToAnother(A* a, A* b, UINT CountElements) {
 	for (UINT i = 0; i < CountElements; i++)a[i] = b[i];
 }
+//структура с параметрами для диалоговой процедуры настройки горячих клавиш
 struct HotKeySettingsDlgParameters {
-	ProgrammParameters::HotKey* PHotKeys = nullptr;
-	UINT HotKeysCount = 0;
-	HICON hDialogIcon = NULL;
+	ProgrammParameters::HotKey* PHotKeys = nullptr;//указатель на массив с горячими клавишами, из него будут читаться ГК для инициализации диалога, в него же будут писаться горячии клавиши после того как они будут модифицированны
+	UINT HotKeysCount = 0;//количество горячих клавиш в массиве на который указывает PHotKeys
+	HICON hDialogIcon = NULL;//иконка диалога настроек горячих клавиш
 };
 typedef HotKeySettingsDlgParameters* PHotKeySettingsDlgParameters;
 typedef const HotKeySettingsDlgParameters* PCHotKeySettingsDlgParameters;

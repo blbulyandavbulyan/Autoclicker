@@ -1,6 +1,37 @@
 #include "stdafx.h"
 #include "hotkeys.h"
+#define VK__none_ 0xFF
 //данный файл содержит реализацию функци€ дл€ работы с гор€чими клавишами
+struct ElementarHotKey {
+	UINT Modifiers = NULL;
+	UINT vk = NULL;
+};
+ElementarHotKey GetVkAndModifiersFromEnteredHotKey(WPARAM EneteredhotKey) {
+	ElementarHotKey result;
+	result.Modifiers = ((UINT)HIBYTE(LOWORD(EneteredhotKey)));
+	result.vk = LOBYTE(LOWORD(EneteredhotKey));
+	return result;
+}
+bool CheckVirtualKeyCodeOnTheCursorKey(UINT vk) {
+	switch (vk) {
+		case VK_UP://стрелка вверх
+		case VK_DOWN://стрелка вниз
+		case VK_RIGHT://стрелка вправо
+		case VK_LEFT:// стрелка влево
+		case VK_INSERT:// клавиша Insert
+		case VK_PRIOR:// клавиша PgUp
+		case VK_NEXT:// клавиша PgDown
+		case VK_HOME:// клавиша Home
+		case VK_END:// клавиша End
+			return true;
+	}
+	return false;
+}
+
+//LRESULT SetKeyForRegisterHotKeyInHotKeyControl(HWND hHotKeyCtrl, UINT vk, UINT Modifiers) {
+//	WPARAM wParamForSetHotKey = MAKEWORD(HotKeys[0].vk, (CheckVirtualKeyCodeOnTheCursorKey(HotKeys[0].vk) ? ConvertHotKeyFromRegisterHotKeyForHotKeyControl(HotKeys[0].Modifiers));
+//	return SendMessage(hEnterHotKey, HKM_SETHOTKEY, wParamForSetHotKey, NULL);
+//}
 // функци€ конвертирует модификаторы гор€чей клавиши полученные от HotKey Control в приеемлемую форму дл€ функции RegisterHotKey
 UINT ConvertHotKeyFromControlHotKeyForRegisterHotKey(BYTE ToConvert) {
 	UINT Result = 0;
@@ -60,6 +91,66 @@ bool IsThereSuchAHotKeyInTheArray(ProgrammParameters::HotKey* HotKeys, UINT Arra
 	}
 	return false;
 }
+LRESULT CALLBACK HotKeySubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam,LPARAM lParam,
+	UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
+	if (uIdSubclass != 0)return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+	switch (uMsg){
+		case WM_PAINT:{
+			ElementarHotKey HK = GetVkAndModifiersFromEnteredHotKey(SendMessageW(hWnd, HKM_GETHOTKEY, 0, 0));
+			struct GetKeyNameData {
+				unsigned : 15;//unused
+				unsigned ScanCode : 8;//—кан код клаивиши
+				unsigned Extended : 1;//€вл€етс€ ли клавиша расширенной
+				unsigned DNC : 1;//»гнорировать левый правый шифт и т.д.
+				unsigned : sizeof(LONG) * 8 - 25;//unused
+			};
+			if (HK.vk == VK__none_) {
+				TSTRING StringToOutput;
+				auto MyGetKeyName = [hWnd, uMsg, wParam, lParam](UINT vk, LPWSTR szKeyName, int cchSize)->POINT {
+					GetKeyNameData GKND = { 0 };
+					GKND.ScanCode = MapVirtualKeyW(vk, MAPVK_VK_TO_VSC);
+					GKND.Extended = 0;
+					GKND.DNC = 0;
+					POINT Result;
+					Result.x = GetKeyNameTextW(*((LONG*)&GKND), szKeyName, cchSize) != NULL;
+					if (Result.x == 0) {
+						TSTRING ErrorText = _TEXT("Ќе удалось получить им€ данной клавиши клавиши, еЄ vk:") + to_tstring(vk), ErrorCaption = _TEXT("ќшибка в функции ") __FUNCTION__  _TEXT(" на строке ") + to_tstring(__LINE__);
+						MessageDebug(ErrorText.c_str(), ErrorCaption.c_str());
+						Result.y = DefSubclassProc(hWnd, uMsg, wParam, lParam);
+					}
+					return Result;
+				};
+				POINT Result = { 0 };
+				WCHAR szKeyName[50] = { 0 };
+				UINT FlagsCheckHotKey[3] = { HOTKEYF_ALT , HOTKEYF_SHIFT, HOTKEYF_CONTROL };
+				UINT VkCodes[3] = { VK_MENU, VK_SHIFT, VK_CONTROL };
+				for (BYTE i = 0; i < 3; i++) {
+					if ((HK.Modifiers & FlagsCheckHotKey[i]) == FlagsCheckHotKey[i]) {
+						Result = MyGetKeyName(VkCodes[i], szKeyName, 50);
+						if (Result.x == 0) {
+							//delete StringToOutput;
+							//StringToOutput = nullptr;
+							return Result.y;
+						}
+						else {
+							if (StringToOutput.size() > 0) {
+								StringToOutput += L" + ";
+								StringToOutput += szKeyName;
+							}
+							else StringToOutput += szKeyName;
+						}
+					}
+				}
+				if (StringToOutput.size() != 0)StringToOutput += L" + Fn";
+				else StringToOutput += L"Fn";
+				SetWindowText(hWnd, StringToOutput.c_str());
+			}
+			else return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+		}
+		default:
+			return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+	}
+}
 //диалогова€ процедура окна настройки гор€чих клавиш
 INT_PTR CALLBACK HotKeySettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam) {
 	HWND hSelectHotKeyId = GetDlgItem(hDlg, IDC_SELECT_HOTKEY_ID);
@@ -94,7 +185,7 @@ INT_PTR CALLBACK HotKeySettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, L
 			}
 		}
 		SendMessage(hSelectHotKeyId, CB_SETCURSEL, 0, NULL);
-		WPARAM wParamForSetHotKey = MAKEWORD(HotKeys[0].vk, ConvertHotKeyFromRegisterHotKeyForHotKeyControl(HotKeys[0].Modifiers));
+		WPARAM wParamForSetHotKey = MAKEWORD(HotKeys[0].vk,ConvertHotKeyFromRegisterHotKeyForHotKeyControl(HotKeys[0].Modifiers));
 		SendMessage(hEnterHotKey, HKM_SETHOTKEY, wParamForSetHotKey, NULL);
 		if (HotKeys[0].HotKeyIsEnable)SendMessage(hEnableHotKey, BM_SETCHECK, (WPARAM)BST_CHECKED, NULL);
 		else SendMessage(hEnableHotKey, BM_SETCHECK, (WPARAM)BST_UNCHECKED, NULL);
@@ -103,6 +194,7 @@ INT_PTR CALLBACK HotKeySettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, L
 			SendMessage(hDlg, WM_SETICON, ICON_BIG, (LPARAM)Params->hDialogIcon);
 			SendMessage(hDlg, WM_SETICON, ICON_SMALL, (LPARAM)Params->hDialogIcon);
 		}
+		SetWindowSubclass(hEnterHotKey, HotKeySubclassProc, 0, 0);
 		//данный вызов предназначен дл€ того, чтобы вывести окно на передний план, он здесь нужен дл€ корректной работы гор€чей клавиши вызова настроек гор€чих клавиш
 		SetForegroundWindow(hDlg);
 		return (INT_PTR)TRUE;
@@ -142,6 +234,7 @@ INT_PTR CALLBACK HotKeySettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, L
 		case IDOK:
 			AssignOneArrayToAnother(Params->PHotKeys, HotKeys, Params->HotKeysCount);
 		case IDCANCEL:
+			RemoveWindowSubclass(hEnterHotKey, HotKeySubclassProc, 0);
 			delete[] HotKeys;
 			EndDialog(hDlg, IDOK);
 			break;
@@ -160,6 +253,7 @@ INT_PTR CALLBACK HotKeySettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, L
 			LRESULT EnteredHotKey = SendMessage(hEnterHotKey, HKM_GETHOTKEY, NULL, NULL);
 			if (EnteredHotKey != 0) {
 				UINT SelectedHotKeyId = SendMessage(hSelectHotKeyId, CB_GETCURSEL, NULL, NULL);
+				//if ((HIBYTE(LOWORD(EnteredHotKey)) & HOTKEYF_EXT) == HOTKEYF_EXT)__debugbreak();
 				UINT Modifiers = ConvertHotKeyFromControlHotKeyForRegisterHotKey((UINT)HIBYTE(LOWORD(EnteredHotKey)));
 				UINT vk = LOBYTE(LOWORD(EnteredHotKey));
 				if (IsThereSuchAHotKeyInTheArray(HotKeys, Params->HotKeysCount, SelectedHotKeyId, Modifiers, vk)) {
