@@ -98,14 +98,14 @@ LRESULT CALLBACK HotKeySubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam,LPARAM l
 		case WM_PAINT:{
 			ElementarHotKey HK = GetVkAndModifiersFromEnteredHotKey(SendMessageW(hWnd, HKM_GETHOTKEY, 0, 0));
 			struct GetKeyNameData {
-				unsigned : 15;//unused
+				unsigned : 16;//unused
 				unsigned ScanCode : 8;//Скан код клаивиши
 				unsigned Extended : 1;//является ли клавиша расширенной
 				unsigned DNC : 1;//Игнорировать левый правый шифт и т.д.
-				unsigned : sizeof(LONG) * 8 - 25;//unused
+				unsigned : 6;//unused
 			};
 			if (HK.vk == VK__none_) {
-				TSTRING StringToOutput;
+				WSTRING StringToOutput;
 				auto MyGetKeyName = [hWnd, uMsg, wParam, lParam](UINT vk, LPWSTR szKeyName, int cchSize)->POINT {
 					GetKeyNameData GKND = { 0 };
 					GKND.ScanCode = MapVirtualKeyW(vk, MAPVK_VK_TO_VSC);
@@ -127,11 +127,7 @@ LRESULT CALLBACK HotKeySubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam,LPARAM l
 				for (BYTE i = 0; i < 3; i++) {
 					if ((HK.Modifiers & FlagsCheckHotKey[i]) == FlagsCheckHotKey[i]) {
 						Result = MyGetKeyName(VkCodes[i], szKeyName, 50);
-						if (Result.x == 0) {
-							//delete StringToOutput;
-							//StringToOutput = nullptr;
-							return Result.y;
-						}
+						if (Result.x == 0) return Result.y;
 						else {
 							if (StringToOutput.size() > 0) {
 								StringToOutput += L" + ";
@@ -143,7 +139,8 @@ LRESULT CALLBACK HotKeySubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam,LPARAM l
 				}
 				if (StringToOutput.size() != 0)StringToOutput += L" + Fn";
 				else StringToOutput += L"Fn";
-				SetWindowText(hWnd, StringToOutput.c_str());
+				if (SetWindowTextW(hWnd, StringToOutput.c_str()) == 0)MessageDebug(_TEXT("Не удалось установить текст в HotKeyControl"), _TEXT("Ошибка в функции ") __FUNCTION__);
+				return TRUE;
 			}
 			else return DefSubclassProc(hWnd, uMsg, wParam, lParam);
 		}
